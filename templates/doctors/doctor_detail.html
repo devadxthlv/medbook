@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Dr. {{ doctor.user.get_full_name }} — MedBook{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'doctors:doctor_list' %}" class="text-decoration-none">Doctors</a></li>
+            <li class="breadcrumb-item active">Dr. {{ doctor.user.get_full_name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    {% if doctor.user.profile_photo %}
+                    <img src="{{ doctor.user.profile_photo.url }}" alt="{{ doctor.user.get_full_name }}"
+                         class="rounded-circle mb-3" width="120" height="120" style="object-fit:cover;">
+                    {% else %}
+                    <div class="avatar-circle avatar-lg mx-auto mb-3">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    {% endif %}
+                    <h3 class="fw-bold mb-1">Dr. {{ doctor.user.get_full_name }}</h3>
+                    <span class="badge bg-primary mb-3">{{ doctor.get_specialisation_display }}</span>
+
+                    <ul class="list-unstyled text-start mt-3">
+                        <li class="mb-2">
+                            <i class="bi bi-briefcase text-primary me-2"></i>
+                            <strong>Experience:</strong> {{ doctor.years_of_experience }} years
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-currency-dollar text-success me-2"></i>
+                            <strong>Consultation Fee:</strong> ${{ doctor.consultation_fee }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-envelope text-info me-2"></i>
+                            {{ doctor.user.email }}
+                        </li>
+                    </ul>
+
+                    {% if user.is_authenticated and user.role == 'PATIENT' %}
+                    <a href="{% url 'appointments:book' doctor.pk %}" class="btn btn-primary w-100 mt-3">
+                        <i class="bi bi-calendar-plus me-2"></i>Book Appointment
+                    </a>
+                    {% elif not user.is_authenticated %}
+                    <a href="{% url 'accounts:login' %}?next={% url 'appointments:book' doctor.pk %}" class="btn btn-primary w-100 mt-3">
+                        <i class="bi bi-calendar-plus me-2"></i>Login to Book
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold mb-3"><i class="bi bi-file-person me-2"></i>About</h4>
+                    {% if doctor.bio %}
+                    <p>{{ doctor.bio|linebreaksbr }}</p>
+                    {% else %}
+                    <p class="text-muted">No bio available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold mb-3"><i class="bi bi-calendar-week me-2"></i>Available Days</h4>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for day in doctor.available_days_list %}
+                        <span class="badge bg-success-subtle text-success px-3 py-2">{{ day }}</span>
+                        {% empty %}
+                        <span class="text-muted">No available days set.</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}My Appointments — MedBook{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="fw-bold mb-4"><i class="bi bi-calendar-check me-2"></i>My Appointments</h1>
+
+    <!-- Upcoming -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+            <h4 class="fw-semibold mb-0"><i class="bi bi-clock text-primary me-2"></i>Upcoming Appointments</h4>
+        </div>
+        <div class="card-body px-4">
+            {% if upcoming %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Specialisation</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in upcoming %}
+                        <tr>
+                            <td>Dr. {{ appt.doctor.user.get_full_name }}</td>
+                            <td>{{ appt.doctor.get_specialisation_display }}</td>
+                            <td>{{ appt.date }}</td>
+                            <td>{{ appt.get_time_slot_display }}</td>
+                            <td>
+                                {% if appt.status == 'PENDING' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif appt.status == 'CONFIRMED' %}
+                                <span class="badge bg-success">Confirmed</span>
+                                {% elif appt.status == 'COMPLETED' %}
+                                <span class="badge bg-secondary">Completed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if appt.status == 'PENDING' %}
+                                <form method="post" action="{% url 'appointments:cancel' appt.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                            onclick="return confirm('Cancel this appointment?')">Cancel</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted py-3">No upcoming appointments. <a href="{% url 'doctors:doctor_list' %}">Find a doctor</a> to book one.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Past -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+            <h4 class="fw-semibold mb-0"><i class="bi bi-clock-history text-secondary me-2"></i>Past Appointments</h4>
+        </div>
+        <div class="card-body px-4">
+            {% if past %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in past %}
+                        <tr>
+                            <td>Dr. {{ appt.doctor.user.get_full_name }}</td>
+                            <td>{{ appt.date }}</td>
+                            <td>{{ appt.get_time_slot_display }}</td>
+                            <td>
+                                {% if appt.status == 'COMPLETED' %}
+                                <span class="badge bg-secondary">Completed</span>
+                                {% elif appt.status == 'CANCELLED' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">{{ appt.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted py-3">No past appointments.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Cancelled -->
+    {% if cancelled %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+            <h4 class="fw-semibold mb-0"><i class="bi bi-x-circle text-danger me-2"></i>Cancelled Appointments</h4>
+        </div>
+        <div class="card-body px-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in cancelled %}
+                        <tr>
+                            <td>Dr. {{ appt.doctor.user.get_full_name }}</td>
+                            <td>{{ appt.date }}</td>
+                            <td>{{ appt.get_time_slot_display }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

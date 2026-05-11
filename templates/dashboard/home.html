@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — MedBook{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-2 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold text-uppercase text-muted small mb-3">Admin Menu</h6>
+                    <nav class="nav flex-column">
+                        <a class="nav-link active px-2" href="{% url 'dashboard:home' %}">
+                            <i class="bi bi-speedometer2 me-2"></i>Overview
+                        </a>
+                        <a class="nav-link px-2" href="{% url 'dashboard:user_list' %}">
+                            <i class="bi bi-people me-2"></i>Users
+                        </a>
+                        <a class="nav-link px-2" href="{% url 'dashboard:doctor_management' %}">
+                            <i class="bi bi-person-badge me-2"></i>Doctors
+                        </a>
+                        <a class="nav-link px-2" href="{% url 'dashboard:appointment_management' %}">
+                            <i class="bi bi-calendar3 me-2"></i>Appointments
+                        </a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-10">
+            <h1 class="fw-bold mb-4"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+
+            <!-- Stats Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm bg-primary text-white">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 small text-white-50">Total Patients</p>
+                                    <h2 class="fw-bold mb-0">{{ total_patients }}</h2>
+                                </div>
+                                <i class="bi bi-people display-5 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm bg-success text-white">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 small text-white-50">Total Doctors</p>
+                                    <h2 class="fw-bold mb-0">{{ total_doctors }}</h2>
+                                </div>
+                                <i class="bi bi-person-badge display-5 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm bg-info text-white">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 small text-white-50">Appointments Today</p>
+                                    <h2 class="fw-bold mb-0">{{ appointments_today }}</h2>
+                                </div>
+                                <i class="bi bi-calendar-day display-5 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm bg-warning text-dark">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1 small opacity-75">Pending</p>
+                                    <h2 class="fw-bold mb-0">{{ pending_appointments }}</h2>
+                                </div>
+                                <i class="bi bi-hourglass-split display-5 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Appointments -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h4 class="fw-semibold mb-0">Recent Appointments</h4>
+                    <a href="{% url 'dashboard:appointment_management' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body px-4">
+                    {% if recent_appointments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Patient</th>
+                                    <th>Doctor</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appt in recent_appointments %}
+                                <tr>
+                                    <td>{{ appt.pk }}</td>
+                                    <td>{{ appt.patient.get_full_name }}</td>
+                                    <td>Dr. {{ appt.doctor.user.get_full_name }}</td>
+                                    <td>{{ appt.date }}</td>
+                                    <td>{{ appt.get_time_slot_display }}</td>
+                                    <td>
+                                        {% if appt.status == 'PENDING' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif appt.status == 'CONFIRMED' %}
+                                        <span class="badge bg-success">Confirmed</span>
+                                        {% elif appt.status == 'CANCELLED' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                        {% elif appt.status == 'COMPLETED' %}
+                                        <span class="badge bg-secondary">Completed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted py-3">No appointments yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

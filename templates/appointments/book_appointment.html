@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Book Appointment with Dr. {{ doctor.user.get_full_name }} — MedBook{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'doctors:doctor_list' %}" class="text-decoration-none">Doctors</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'doctors:doctor_detail' doctor.pk %}" class="text-decoration-none">Dr. {{ doctor.user.get_full_name }}</a></li>
+            <li class="breadcrumb-item active">Book Appointment</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center p-4">
+                    {% if doctor.user.profile_photo %}
+                    <img src="{{ doctor.user.profile_photo.url }}" alt="{{ doctor.user.get_full_name }}"
+                         class="rounded-circle mb-3" width="80" height="80" style="object-fit:cover;">
+                    {% else %}
+                    <div class="avatar-circle mx-auto mb-3"><i class="bi bi-person-fill"></i></div>
+                    {% endif %}
+                    <h5 class="fw-bold">Dr. {{ doctor.user.get_full_name }}</h5>
+                    <span class="badge bg-primary">{{ doctor.get_specialisation_display }}</span>
+                    <p class="mt-2 text-success fw-semibold">${{ doctor.consultation_fee }}</p>
+                    <hr>
+                    <p class="small text-muted mb-1"><strong>Available:</strong></p>
+                    {% for day in doctor.available_days_list %}
+                    <span class="badge bg-light text-dark">{{ day }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold mb-4"><i class="bi bi-calendar-plus me-2"></i>Book Appointment</h3>
+                    <form method="post" id="booking-form">
+                        {% csrf_token %}
+                        {{ form.doctor }}
+
+                        <div class="mb-3">
+                            <label for="{{ form.date.id_for_label }}" class="form-label fw-medium">Select Date</label>
+                            {{ form.date }}
+                            {% for error in form.date.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Select Time Slot</label>
+                            <div id="time-slots-container">
+                                <p class="text-muted"><i class="bi bi-info-circle me-1"></i>Select a date first to see available slots.</p>
+                            </div>
+                            <input type="hidden" name="time_slot" id="selected-time-slot" value="">
+                            {% for error in form.time_slot.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.reason.id_for_label }}" class="form-label fw-medium">Reason for Visit</label>
+                            {{ form.reason }}
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="book-btn" disabled>
+                            <i class="bi bi-check-circle me-2"></i>Confirm Booking
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const dateInput = document.getElementById('{{ form.date.id_for_label }}');
+    const slotsContainer = document.getElementById('time-slots-container');
+    const selectedSlotInput = document.getElementById('selected-time-slot');
+    const bookBtn = document.getElementById('book-btn');
+    const doctorId = '{{ doctor.pk }}';
+
+    // Set min date to today
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.setAttribute('min', today);
+
+    dateInput.addEventListener('change', function() {
+        const date = this.value;
+        if (!date) return;
+
+        slotsContainer.innerHTML = '<p class="text-muted">Loading available slots…</p>';
+
+        fetch(`/appointments/available-slots/?doctor_id=${doctorId}&date=${date}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    slotsContainer.innerHTML = `<div class="alert alert-warning">${data.error}</div>`;
+                    bookBtn.disabled = true;
+                    return;
+                }
+                if (data.message) {
+                    slotsContainer.innerHTML = `<div class="alert alert-info">${data.message}</div>`;
+                    bookBtn.disabled = true;
+                    return;
+                }
+                if (!data.slots || data.slots.length === 0) {
+                    slotsContainer.innerHTML = '<div class="alert alert-info">No slots available for this day.</div>';
+                    bookBtn.disabled = true;
+                    return;
+                }
+
+                let html = '<div class="d-flex flex-wrap gap-2">';
+                data.slots.forEach(slot => {
+                    const cls = slot.available
+                        ? 'btn btn-outline-primary slot-btn'
+                        : 'btn btn-outline-secondary slot-btn disabled';
+                    html += `<button type="button" class="${cls}" data-value="${slot.value}"
+                              ${slot.available ? '' : 'disabled'}>${slot.label}</button>`;
+                });
+                html += '</div>';
+                slotsContainer.innerHTML = html;
+
+                // Add click handlers
+                document.querySelectorAll('.slot-btn:not(.disabled)').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active', 'btn-primary'));
+                        document.querySelectorAll('.slot-btn').forEach(b => {
+                            if (!b.disabled) b.classList.add('btn-outline-primary');
+                        });
+                        this.classList.remove('btn-outline-primary');
+                        this.classList.add('active', 'btn-primary');
+                        selectedSlotInput.value = this.dataset.value;
+                        bookBtn.disabled = false;
+                    });
+                });
+
+                selectedSlotInput.value = '';
+                bookBtn.disabled = true;
+            })
+            .catch(() => {
+                slotsContainer.innerHTML = '<div class="alert alert-danger">Failed to load slots. Please try again.</div>';
+            });
+    });
+})();
+</script>
+{% endblock %}

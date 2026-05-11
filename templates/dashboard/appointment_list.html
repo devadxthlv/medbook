@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Appointments — MedBook{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-lg-2 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold text-uppercase text-muted small mb-3">Admin Menu</h6>
+                    <nav class="nav flex-column">
+                        <a class="nav-link px-2" href="{% url 'dashboard:home' %}"><i class="bi bi-speedometer2 me-2"></i>Overview</a>
+                        <a class="nav-link px-2" href="{% url 'dashboard:user_list' %}"><i class="bi bi-people me-2"></i>Users</a>
+                        <a class="nav-link px-2" href="{% url 'dashboard:doctor_management' %}"><i class="bi bi-person-badge me-2"></i>Doctors</a>
+                        <a class="nav-link active px-2" href="{% url 'dashboard:appointment_management' %}"><i class="bi bi-calendar3 me-2"></i>Appointments</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-10">
+            <h1 class="fw-bold mb-4"><i class="bi bi-calendar3 me-2"></i>Manage Appointments</h1>
+
+            <!-- Filter -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <form method="get" class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">All statuses</option>
+                                {% for value, label in statuses %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    {% if appointments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Patient</th>
+                                    <th>Doctor</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appt in appointments %}
+                                <tr>
+                                    <td>{{ appt.pk }}</td>
+                                    <td>{{ appt.patient.get_full_name }}</td>
+                                    <td>Dr. {{ appt.doctor.user.get_full_name }}</td>
+                                    <td>{{ appt.date }}</td>
+                                    <td>{{ appt.get_time_slot_display }}</td>
+                                    <td>
+                                        {% if appt.status == 'PENDING' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif appt.status == 'CONFIRMED' %}
+                                        <span class="badge bg-success">Confirmed</span>
+                                        {% elif appt.status == 'CANCELLED' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                        {% elif appt.status == 'COMPLETED' %}
+                                        <span class="badge bg-secondary">Completed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{% url 'dashboard:admin_update_appointment' appt.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <select name="status" class="form-select form-select-sm d-inline-block" style="width:auto;">
+                                                {% for val, label in statuses %}
+                                                <option value="{{ val }}" {% if appt.status == val %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Update</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if appointments.has_other_pages %}
+                    <nav class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            {% if appointments.has_previous %}
+                            <li class="page-item"><a class="page-link" href="?page={{ appointments.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Previous</a></li>
+                            {% endif %}
+                            {% for num in appointments.paginator.page_range %}
+                            <li class="page-item {% if appointments.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}">{{ num }}</a>
+                            </li>
+                            {% endfor %}
+                            {% if appointments.has_next %}
+                            <li class="page-item"><a class="page-link" href="?page={{ appointments.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted py-3">No appointments found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

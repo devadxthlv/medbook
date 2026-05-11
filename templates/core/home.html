@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}MedBook — Healthcare Appointment Booking{% endblock %}
+
+{% block content %}
+<section class="hero-section text-white text-center py-5">
+    <div class="container py-5">
+        <h1 class="display-4 fw-bold mb-3">Your Health, Our Priority</h1>
+        <p class="lead mb-4 mx-auto" style="max-width:600px;">
+            Find trusted doctors, book appointments in seconds, and take control of your healthcare journey — all in one place.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'doctors:doctor_list' %}" class="btn btn-light btn-lg px-4">
+                <i class="bi bi-search me-2"></i>Find a Doctor
+            </a>
+            {% if not user.is_authenticated %}
+            <a href="{% url 'accounts:register' %}" class="btn btn-outline-light btn-lg px-4">
+                Get Started
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center fw-bold mb-5">How It Works</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm text-center p-4 card-hover">
+                    <div class="card-body">
+                        <div class="feature-icon mb-3">
+                            <i class="bi bi-search display-4 text-primary"></i>
+                        </div>
+                        <h5 class="card-title fw-semibold">1. Find a Doctor</h5>
+                        <p class="card-text text-muted">Browse our network of qualified doctors. Filter by specialisation and find the perfect match for your needs.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm text-center p-4 card-hover">
+                    <div class="card-body">
+                        <div class="feature-icon mb-3">
+                            <i class="bi bi-calendar-check display-4 text-success"></i>
+                        </div>
+                        <h5 class="card-title fw-semibold">2. Book an Appointment</h5>
+                        <p class="card-text text-muted">Choose a convenient date and time slot. Our real-time availability system ensures no double bookings.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm text-center p-4 card-hover">
+                    <div class="card-body">
+                        <div class="feature-icon mb-3">
+                            <i class="bi bi-clipboard2-pulse display-4 text-info"></i>
+                        </div>
+                        <h5 class="card-title fw-semibold">3. Get Care</h5>
+                        <p class="card-text text-muted">Visit your doctor at the scheduled time. Track your appointments and manage your health history.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="bg-light py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="fw-bold mb-3">Why Choose MedBook?</h2>
+                <ul class="list-unstyled">
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                        <div>
+                            <strong>Verified Doctors</strong><br>
+                            <span class="text-muted">All doctors on our platform are verified professionals with proven experience.</span>
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                        <div>
+                            <strong>Easy Scheduling</strong><br>
+                            <span class="text-muted">Book appointments 24/7 with our intuitive scheduling system.</span>
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                        <div>
+                            <strong>Instant Confirmation</strong><br>
+                            <span class="text-muted">Receive immediate booking confirmation with email notifications.</span>
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex align-items-start">
+                        <i class="bi bi-check-circle-fill text-success me-3 mt-1"></i>
+                        <div>
+                            <strong>Secure & Private</strong><br>
+                            <span class="text-muted">Your health data is protected with industry-standard security measures.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="p-4">
+                    <i class="bi bi-hospital display-1 text-primary opacity-25" style="font-size:12rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
