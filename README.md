@@ -2,7 +2,7 @@
   <h1>🏥 MedBook</h1>
   <p><strong>Healthcare Appointment Booking System & DevSecOps Capstone</strong></p>
 
-  [![Build & Test](https://github.com/devadxthlv/medbook/actions/workflows/deploy.yml/badge.svg)](https://github.com/devadxthlv/medbook/actions)
+  [![Production Deployment](https://github.com/devadxthlv/medbook/actions/workflows/deploy.yml/badge.svg)](https://github.com/devadxthlv/medbook/actions)
   [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
   [![Django](https://img.shields.io/badge/Django-4.2-green.svg)](https://www.djangoproject.com/)
   [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
@@ -127,17 +127,15 @@ Security is built into the architecture across multiple layers:
 
 ## 🚀 DevSecOps Pipeline
 
-The deployment process is entirely automated to ensure zero-downtime and consistent state.
+The deployment process is entirely automated and hardened to ensure zero-downtime and consistent state.
 
 1. **Push to `main`** triggers GitHub Actions.
-2. **CI Tests:** Spins up an ephemeral MySQL container, runs the Django test suite, and scans dependencies.
-3. **CD Deployment:**
-   * SSH access into the EC2 instance.
-   * `git pull` latest changes.
-   * `docker compose build` to construct new images.
-   * `docker compose up -d` for graceful service restarts.
-   * Runs database migrations and static file collection.
-4. **Smoke Test:** Executes `scripts/smoke_test.sh` to empirically verify HTTPS reachability and HTTP redirection.
+2. **CI Tests:** Spins up an ephemeral MySQL container, runs the Django test suite, and scans dependencies for CVEs.
+3. **CD Deployment (via SSH):**
+   * **State Enforcement:** Forces the server to mirror the `main` branch via `git reset --hard`, eliminating merge conflicts caused by manual server tweaks.
+   * **Container Synchronization:** The pipeline waits for the Docker healthcheck to pass before proceeding, ensuring the application is ready for traffic.
+   * **Zero-Downtime Migration:** Runs database migrations and static collection inside the healthy container.
+4. **Smoke Test:** Executes `scripts/smoke_test.sh` with automated retries to verify public HTTPS reachability and HTTP-to-HTTPS redirection.
 
 ---
 

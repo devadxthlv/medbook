@@ -44,7 +44,6 @@ MedBook employs a defense-in-depth approach, assuming the network is hostile.
 ---
 
 ## 4. Operational Workflows
-
 ### Deployment
 Deployments are entirely handled by GitHub Actions (`deploy.yml`). Pushing to `main` triggers:
 1. Ephemeral MySQL database creation.
@@ -52,9 +51,43 @@ Deployments are entirely handled by GitHub Actions (`deploy.yml`). Pushing to `m
 3. Execution of Python `safety` to check for CVEs.
 4. SSH execution of `scripts/deploy.sh` on the EC2 host.
 
-*Manual Trigger:* `bash scripts/deploy.sh` on the server.
+#### GitHub Secrets Required
+* **EC2_HOST:** Public IP (`3.27.246.227`).
+* **EC2_USER:** `ubuntu`.
+* **EC2_SSH_KEY:** Full PEM private key (including headers/footers).
+* **EC2_PORT:** `22` (default).
+* **DJANGO_SECRET_KEY:** For CI tests.
+
+#### Deployment Hardening Features
+* **Conflict Resolution:** `scripts/deploy.sh` uses `git reset --hard` to ensure the server exactly mirrors the repository, bypassing local merge conflicts.
+* **Synchronization Barriers:** The deployment script polls the Docker daemon until the `web` container reports a `healthy` status before attempting migrations or smoke tests.
+* **Resilient Smoke Tests:** `scripts/smoke_test.sh` includes a retry loop to account for the brief window while Nginx reloads its upstream configuration.
 
 ### Automated Backups
+...
+
+---
+
+## 5. CI/CD Debugging & Troubleshooting
+
+When the GitHub Action fails, check the following:
+
+### 1. SSH Authentication Errors
+* **Symptom:** "Permission denied" or "Connection timeout" in the GitHub Action log.
+* **Fix:** Verify `EC2_SSH_KEY` is the correct private key and `EC2_HOST` is reachable. Ensure `EC2_PORT` is open in the AWS Security Group.
+
+### 2. State Drift / Merge Conflicts
+* **Symptom:** `git pull` errors on the server.
+* **Fix:** The hardened script now uses `git reset --hard`, but if issues persist, manually run `git status` on the server to check for untracked files blocking the reset.
+
+### 3. Service Health Timeouts
+* **Symptom:** "Timeout waiting for web container health" in `deploy.sh`.
+* **Fix:** Check container logs: `docker compose logs web`. Usually caused by a database connection failure or a misconfigured `.env` file on the server.
+
+### 4. Smoke Test Failures
+* **Symptom:** `❌ HTTPS NOT reachable` in logs.
+* **Fix:** Verify the site is up manually. If it is, the EC2 instance may have "Hairpin NAT" issues (unable to reach its own public IP). The script uses `curl -k` to minimize TLS handshake issues during verification.
+
 Data is synchronized to AWS S3 nightly via a Cron job calling `scripts/backup.sh`.
 * It executes an authenticated `mysqldump` directly against the internal Docker database.
 * Compresses the output (`gzip`).
