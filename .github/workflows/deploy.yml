@@ -1,0 +1,106 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: medbook_test
+          MYSQL_USER: medbook_user
+          MYSQL_PASSWORD: medbook_password
+          MYSQL_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot_password --silent"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+
+    env:
+      SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY || 'ci-only-secret-key' }}
+      DEBUG: "False"
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1
+      DJANGO_SETTINGS_MODULE: medbook.settings.production
+      DB_NAME: medbook_test
+      DB_USER: medbook_user
+      DB_PASSWORD: medbook_password
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for database
+        run: python manage.py wait_for_db
+
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+
+      - name: Run tests
+        run: python manage.py test --noinput
+
+      - name: Safety dependency scan
+        run: |
+          pip install safety
+          safety check || true
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/medbook
+            bash scripts/deploy.sh
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [test, deploy]
+    if: always()
+
+    steps:
+      - name: Write deployment summary
+        run: |
+          {
+            echo "## MedBook CI/CD"
+            echo ""
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Event: \`${{ github.event_name }}\`"
+            echo "- Test result: \`${{ needs.test.result }}\`"
+            echo "- Deploy result: \`${{ needs.deploy.result }}\`"
+            echo "- Timestamp: \`$(date -u +'%Y-%m-%dT%H:%M:%SZ')\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -185,3 +185,100 @@ The test suite contains **30 tests** across all four apps:
 - **System packages** (for MySQL support): `gcc`, `default-libmysqlclient-dev`, `pkg-config`
 - **System packages** (for Pillow): `libjpeg-dev`, `zlib1g-dev`
 - **Docker** (optional): Docker 20+ and Docker Compose v2 for containerised deployment
+
+---
+
+## Production Deployment Notes
+
+Current capstone deployment target:
+
+- AWS EC2 Ubuntu micro instance
+- Docker Compose stack: `nginx`, `web`, `db`
+- Nginx is the only public application entrypoint; Django/Gunicorn and MySQL stay on the internal Docker network.
+- Static files are collected into `static_data`; uploaded files persist in `media_data`; MySQL persists in `mysql_data`.
+- `/health/` is the application health endpoint used by Docker and Nginx checks.
+
+Infrastructure decisions:
+
+- Gunicorn is intentionally configured for `WEB_CONCURRENCY=1` with two threads because the EC2 instance has less than 1 GB RAM.
+- MySQL uses conservative memory flags: small InnoDB buffer pool, limited connections, and disabled Performance Schema.
+- HTTPS settings in Django are environment-controlled. Keep redirects and HSTS disabled until a valid domain certificate exists.
+- Bare EC2 public IPs cannot receive Let's Encrypt certificates. Point a domain A record to the instance before running Certbot.
+- Keep swap enabled on the micro instance to absorb deploy/build spikes.
+
+Operational commands:
+
+```bash
+docker-compose build web
+docker-compose up -d
+docker-compose ps
+docker-compose logs --tail=100 web nginx db
+curl -I http://localhost/health/
+```
+
+Scaling recommendations:
+
+- Move MySQL to Amazon RDS before real users or PHI-like data.
+- Put Nginx behind an ALB for managed TLS, access logs, and health checks.
+- Store media in S3 instead of local Docker volumes.
+- Add CloudWatch Agent for memory/disk metrics and ship Docker/Nginx logs.
+- Add scheduled `mysqldump` plus media archive backups to S3 with restore testing.
+
+---
+
+## Phase 4 — Deployment Stabilisation and CI/CD
+
+Live target:
+
+- EC2 public IP: `3.27.246.227`
+- Live URL: `http://3.27.246.227`
+- Stack: Docker Compose with `nginx`, `web`, and local `db` MySQL containers.
+
+What was fixed:
+
+- Gunicorn now starts with one worker, a 120 second timeout, and max-request recycling to fit the t3.micro memory limit.
+- Django startup now runs `python manage.py wait_for_db` before migrations, avoiding the MySQL readiness race.
+- Nginx now proxies to the Docker service upstream `web:8000`, serves static/media volumes, and uses the EC2 public IP as `server_name`.
+- Production settings default `ALLOWED_HOSTS` to `3.27.246.227,localhost,127.0.0.1` and `CSRF_TRUSTED_ORIGINS` to `http://3.27.246.227`.
+- `docker-compose.prod.yml` uses MySQL healthchecks and only starts `web` after MySQL is healthy.
+
+What was added:
+
+- `.github/workflows/deploy.yml` runs Django tests with a MySQL service, then deploys pushes to `main` over SSH.
+- `scripts/deploy.sh` pulls `main`, rebuilds `web`, restarts Compose, prunes old images, and runs the smoke test.
+- `scripts/smoke_test.sh` checks `http://3.27.246.227/` and prints Docker status/logs on failure.
+- `scripts/backup.sh` dumps MySQL, uploads the compressed dump to S3, and syncs media backups.
+
+Operational commands:
+
+```bash
+# Manual deploy on EC2
+bash scripts/deploy.sh
+
+# Live logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# Container status
+docker ps
+
+# Smoke test
+bash scripts/smoke_test.sh
+```
+
+EC2 security group reminder:
+
+- If `docker ps` shows healthy containers but the site is unreachable, check the AWS console security group.
+- Inbound HTTP must allow TCP port `80` from `0.0.0.0/0`.
+- SSH should allow TCP port `22` from the maintainer's current IP only.
+
+Backup schedule:
+
+```cron
+0 2 * * * /home/ubuntu/medbook/scripts/backup.sh
+```
+
+Phase 5 tasks:
+
+- Configure CloudWatch metrics and log shipping.
+- Add HTTPS after a domain points to the EC2 instance.
+- Complete the project report with deployment screenshots and CI/CD evidence.

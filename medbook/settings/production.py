@@ -5,11 +5,22 @@ Reads all secrets from environment variables.  MySQL is the primary database.
 Security headers are tightened for deployment behind HTTPS/Nginx.
 """
 
-from decouple import config
+from decouple import Csv, config
 
 from .base import *  # noqa: F401, F403
 
 DEBUG = False
+
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="3.27.246.227,localhost,127.0.0.1",
+    cast=Csv(),
+)
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://3.27.246.227",
+    cast=Csv(),
+)
 
 # ──────────────────────────────────────────────
 # Database — MySQL
@@ -43,10 +54,10 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # ──────────────────────────────────────────────
 # Security hardening (HTTPS assumed)
 # ──────────────────────────────────────────────
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = 31_536_000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=SECURE_SSL_REDIRECT, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

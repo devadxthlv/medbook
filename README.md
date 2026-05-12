@@ -235,6 +235,99 @@ medbook/
 | `/dashboard/appointments/`              | GET    | Appointment management      | Admin/Staff |
 | `/dashboard/appointments/<pk>/update/`   | POST   | Update appointment status   | Admin/Staff |
 | `/admin/`                                | GET    | Django admin site           | Superuser   |
+| `/health/`                               | GET    | Container/load-balancer health check | Public |
+
+---
+
+## Deployment & CI/CD
+
+The EC2 deployment runs three containers on one Docker network:
+
+- `nginx`: public entrypoint on port `80`; proxies Django and serves `/static/` and `/media/`.
+- `web`: Django + Gunicorn, internal port `8000` only.
+- `db`: MySQL 8.0 with persistent Docker volume `mysql_data`, internal port `3306` only.
+
+Live site: `http://3.27.246.227`
+
+CI/CD flow:
+
+```text
+git push -> GitHub Actions -> SSH -> scripts/deploy.sh -> docker compose up
+```
+
+Recommended production `.env` values:
+
+```bash
+SECRET_KEY=<strong secret>
+DEBUG=False
+ALLOWED_HOSTS=3.27.246.227,localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://3.27.246.227
+DJANGO_SETTINGS_MODULE=medbook.settings.production
+DB_NAME=medbook_db
+DB_USER=medbook_user
+DB_PASSWORD=<strong password>
+DB_ROOT_PASSWORD=<strong root password>
+DB_HOST=db
+DB_PORT=3306
+SECURE_SSL_REDIRECT=False
+S3_BUCKET=<backup bucket>
+```
+
+Enable `SECURE_SSL_REDIRECT=True`, secure cookies, and HSTS only after a valid domain certificate is installed. Let's Encrypt does not issue certificates for bare public IP addresses.
+
+GitHub Actions secrets:
+
+| Secret name | Value |
+|-------------|-------|
+| `EC2_HOST` | `3.27.246.227` |
+| `EC2_USER` | `ubuntu` |
+| `EC2_SSH_KEY` | Contents of the EC2 private key |
+| `DJANGO_SECRET_KEY` | Django production secret key |
+| `DB_NAME` | MySQL database name |
+| `DB_USER` | MySQL username |
+| `DB_PASSWORD` | MySQL password |
+| `DB_HOST` | `db` for Docker MySQL, or the RDS endpoint |
+
+Manual deploy on EC2:
+
+```bash
+ssh ubuntu@3.27.246.227
+cd /home/ubuntu/medbook
+bash scripts/deploy.sh
+```
+
+Manual Docker commands:
+
+```bash
+docker compose -f docker-compose.prod.yml build web
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs --tail=100 web nginx db
+curl -I http://localhost/health/
+```
+
+Rollback:
+
+```bash
+git revert <commit>
+git push origin main
+```
+
+For a micro instance, keep `WEB_CONCURRENCY=1`, retain swap, and avoid exposing MySQL or Gunicorn directly to the internet.
+
+Backup strategy:
+
+```bash
+bash scripts/backup.sh
+```
+
+Schedule on EC2 with `crontab -e`:
+
+```cron
+0 2 * * * /home/ubuntu/medbook/scripts/backup.sh
+```
+
+Store backups off-instance in S3 with lifecycle rules. Monitor disk, memory, Docker restarts, Nginx 5xx counts, and MySQL backup freshness through CloudWatch Agent or equivalent.
 
 ---
 
@@ -252,6 +345,8 @@ medbook/
 | Secrets via env vars               | `python-decouple` — `SECRET_KEY`, DB creds loaded from `.env` |
 | DEBUG=False in production          | `production.py` sets `DEBUG = False` |
 | HTTPS hardening (prod)             | SSL redirect, HSTS, secure cookies in `production.py` |
+| Health checks                      | `/health/`, Docker healthchecks, Nginx healthcheck |
+| Reverse proxy hardening            | Nginx security headers, gzip, proxy timeout tuning |
 | Input validation                   | Django forms with built-in validators; model `clean()` methods |
 | Double-booking prevention          | DB `UniqueConstraint` + model-level `clean()` validation |
 | SecurityMiddleware                 | First middleware in `MIDDLEWARE` list in `base.py` |
