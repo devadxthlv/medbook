@@ -12,17 +12,25 @@ db.sqlite3-journal
 media/
 staticfiles/
 
-# Environment
+# Environment & Secrets
 .env
 venv/
 .venv/
+*.pem
+*.key
+*.pub
 
-# IDE
+# Production infrastructure
+certbot/
+.tools/
+mysql_data/
+*.sql
+*.gz
+
+# IDE & OS
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db

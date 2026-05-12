@@ -1,374 +1,140 @@
-# MedBook — Healthcare Appointment Booking System
+# MedBook — Healthcare DevSecOps Capstone
 
-MedBook is a full-featured healthcare appointment booking platform built with Django. It enables patients to find doctors, book appointments, and manage their health journey, while giving doctors tools to manage their schedules and administrators a comprehensive dashboard for oversight.
+MedBook is a comprehensive, production-grade healthcare appointment booking system. Built with Django and deployed via a robust DevSecOps pipeline on AWS EC2, it demonstrates advanced architectural patterns, strict security hardening, and continuous delivery mechanisms.
 
----
+![MedBook Dashboard Placeholder](https://via.placeholder.com/800x400.png?text=MedBook+Dashboard)
 
-## Tech Stack
+## 📌 Project Overview
 
-| Component        | Technology             | Version |
-|------------------|------------------------|---------|
-| Backend          | Django                 | 4.2.17  |
-| Language         | Python                 | 3.12+   |
-| Database (prod)  | MySQL                  | 8.0     |
-| Database (dev)   | SQLite                 | 3       |
-| MySQL driver     | mysqlclient            | 2.2.6   |
-| Image processing | Pillow                 | 11.1.0  |
-| Config           | python-decouple        | 3.8     |
-| WSGI server      | Gunicorn               | 23.0.0  |
-| Frontend         | Bootstrap 5 + vanilla JS | 5.3.3 |
-| Reverse proxy    | Nginx                  | alpine  |
-| Containerisation | Docker + Docker Compose | —      |
+MedBook enables patients to find doctors and book appointments through a dynamic time-slot system, while giving doctors and administrators powerful tools to manage schedules and user accounts.
 
----
+**Production URL**: [https://3-27-246-227.nip.io](https://3-27-246-227.nip.io)  
+**Alternative Domain**: [https://medbook.3-27-246-227.nip.io](https://medbook.3-27-246-227.nip.io)
 
-## Features
+This repository serves as a **DevSecOps capstone project**, demonstrating the complete lifecycle of a web application from local development to a highly secure, automated, and observable production environment.
 
-- **User Management & Auth**
-  - Custom User model with role-based access (Patient / Doctor / Admin)
-  - Patient self-registration with email confirmation (console backend in dev)
-  - Login, logout, and full password-reset flow
-  - Profile page with photo upload
+## 🏗 Architecture Overview
 
-- **Doctor Listings**
-  - Public doctor listing with search by name and filter by specialisation
-  - Individual doctor detail page with bio, experience, fee, and availability
-  - Admin can create, edit, and delete doctor profiles
+The system operates as a containerized stack orchestrated by Docker Compose:
 
-- **Appointment Booking**
-  - Patients book appointments with doctors by choosing date + time slot
-  - Dynamic time-slot selector (JS fetch to `/appointments/available-slots/`)
-  - 30-minute slots from 09:00–17:00
-  - Double-booking prevention: unique constraint at DB level + form validation
-  - Patients can view upcoming/past/cancelled appointments and cancel pending ones
-  - Doctors can view their schedule, confirm, and mark appointments complete
+*   **Nginx**: Reverse proxy, SSL terminator, and static asset server.
+*   **Django + Gunicorn**: The core Python application backend.
+*   **MySQL 8.0**: Relational database engine, optimized for low-memory footprint.
+*   **Certbot**: Sidecar service for automated Let's Encrypt TLS certificate renewals.
 
-- **Admin Dashboard** (`/dashboard/`)
-  - Summary stats: total patients, doctors, today's appointments, pending count
-  - Recent appointments table with colour-coded status badges
-  - User management: list, role filter, activate/deactivate
-  - Doctor management: full CRUD
-  - Appointment management: status updates with filter
-
-- **Notifications**
-  - Flash messages (Bootstrap alerts) for all key actions
-  - Email notifications on registration and booking (console backend in dev)
+### Stack Explanation
+*   **Backend**: Django 4.2.17 (Python 3.12)
+*   **Database**: MySQL 8.0 (Production), SQLite (Local Dev)
+*   **Frontend**: Vanilla JS, Bootstrap 5
+*   **Infrastructure**: AWS EC2 (Ubuntu), Docker
+*   **CI/CD**: GitHub Actions
 
 ---
 
-## Architecture Overview
+## 🚀 DevSecOps & Security Features
 
-```
-┌─────────────┐     ┌────────────┐     ┌────────────┐
-│   Browser   │────▶│   Nginx    │────▶│  Gunicorn  │
-│  (BS5 + JS) │     │ (reverse   │     │  (WSGI)    │
-└─────────────┘     │  proxy)    │     └─────┬──────┘
-                    └────────────┘           │
-                                       ┌────▼────┐
-                                       │  Django  │
-                                       │  4.2.17  │
-                                       └────┬────┘
-                                            │
-                                    ┌───────▼───────┐
-                                    │  MySQL 8.0    │
-                                    │  (or SQLite)  │
-                                    └───────────────┘
-```
+This application implements critical DevSecOps principles, transitioning it from a standard application to a hardened production service.
 
-The project is organised into four Django apps:
+### 1. Server & Host Hardening
+*   **UFW Firewall**: Restricts inbound traffic strictly to ports 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+*   **SSH Security**: Password authentication and root logins are disabled. `MaxAuthTries` configured to prevent brute force.
+*   **Fail2Ban**: Actively monitors authentication logs and automatically bans malicious IPs.
+*   **Unattended Upgrades**: Automated daily application of critical OS security patches.
 
-- **accounts** — Custom User model, registration, login/logout, profile
-- **doctors** — Doctor model and public listing/detail views
-- **appointments** — Appointment model, booking, management, available-slots API
-- **dashboard** — Admin-only dashboard with stats and CRUD management
+### 2. Network & Application Security
+*   **Automated HTTPS**: Let's Encrypt integration via Certbot with automatic renewals (`init-letsencrypt.sh`).
+*   **Domain Migration**: Moved from raw IP access to `3-27-246-227.nip.io` for stable browser behavior and valid TLS.
+*   **Nginx Hardening**: Implemented rate limiting (`10r/s`), `client_max_body_size` enforcement, and strict timeout directives to mitigate slow-loris attacks.
+*   **Security Headers**: Enforced HSTS, X-Content-Type-Options, X-Frame-Options, and Content Security Policy (CSP).
+*   **Django Hardening**: `DEBUG=False`, secure session/CSRF cookies, and parameterized queries using Django's ORM.
 
-A shared **core** app provides the home page, the `@role_required` decorator, and shared utilities.
+### 3. Monitoring & Observability
+*   **CloudWatch Agent**: Automated setup script (`setup_cloudwatch.sh`) provisions AWS CloudWatch metrics for EC2 Memory, Disk Usage, and streams `/var/log/auth.log` directly to AWS for centralized auditing.
+*   **Automated Smoke Testing**: Post-deployment testing verifies service health (`/health/`) and container stability.
+
+### 4. CI/CD Pipeline
+*   **Automated Testing**: GitHub Actions provisions a MySQL service and runs the complete Django test suite on every PR/Push.
+*   **Security Scanning**: Uses `safety` to scan Python dependencies for known CVEs.
+*   **Automated Deployment**: Secure SSH deployment pipeline triggers `deploy.sh` to pull code, run migrations, rebuild Docker images, and perform zero-downtime container restarts.
 
 ---
 
-## Local Setup
+## 💻 Local Setup Instructions
 
+1. **Clone the repository:**
+   ```bash
+   git clone <repo-url> && cd medbook
+   ```
+2. **Setup virtual environment:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt -r requirements-dev.txt
+   ```
+3. **Environment Configuration:**
+   ```bash
+   cp .env.example .env
+   # Edit .env to set a development SECRET_KEY
+   ```
+4. **Database & Start:**
+   ```bash
+   python manage.py migrate
+   python manage.py runserver
+   ```
+
+---
+
+## 🌍 AWS Deployment Workflow
+
+### Initial Server Provisioning
+1. Provision an Ubuntu EC2 instance and assign an Elastic IP.
+2. Clone the repository onto the instance.
+3. Run the hardening and monitoring scripts:
+   ```bash
+   sudo bash scripts/harden_server.sh
+   sudo bash scripts/setup_cloudwatch.sh
+   ```
+4. Create the production `.env` file with production MySQL credentials and secrets.
+
+### Provisioning TLS & Starting Application
+Execute the Let's Encrypt initialization script. This creates temporary dummy certificates so Nginx can start, then replaces them with real certs via Certbot webroot challenge:
 ```bash
-# 1. Clone the repository
-git clone <repo-url> && cd medbook
-
-# 2. Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-# For development extras (coverage, flake8):
-pip install -r requirements-dev.txt
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env — at minimum set a SECRET_KEY
-
-# 5. Run migrations (SQLite by default)
-python manage.py migrate
-
-# 6. Create a superuser (admin)
-python manage.py createsuperuser
-
-# 7. Start the development server
-python manage.py runserver
+bash scripts/init-letsencrypt.sh
 ```
 
-Visit `http://127.0.0.1:8000/` — you're live!
+### CI/CD Deployment
+Once the initial stack is running, all future deployments are handled by GitHub Actions. Pushing to the `main` branch will automatically update the EC2 instance.
 
 ---
 
-## Environment Variables
+## 💾 Backup Strategy
 
-| Variable                 | Description                              | Example                          |
-|--------------------------|------------------------------------------|----------------------------------|
-| `SECRET_KEY`             | Django secret key                        | `your-super-secret-key`         |
-| `DEBUG`                  | Enable debug mode                        | `True`                           |
-| `DJANGO_SETTINGS_MODULE` | Settings module path                    | `medbook.settings.development`   |
-| `ALLOWED_HOSTS`          | Comma-separated allowed hosts           | `localhost,127.0.0.1`            |
-| `DB_NAME`                | MySQL database name                      | `medbook_db`                     |
-| `DB_USER`                | MySQL user                               | `medbook_user`                   |
-| `DB_PASSWORD`            | MySQL password                           | `secure-password-here`           |
-| `DB_HOST`                | MySQL host                               | `127.0.0.1`                      |
-| `DB_PORT`                | MySQL port                               | `3306`                           |
-| `EMAIL_HOST`             | SMTP server                              | `smtp.gmail.com`                 |
-| `EMAIL_PORT`             | SMTP port                                | `587`                            |
-| `EMAIL_HOST_USER`        | SMTP username                            | `your-email@gmail.com`           |
-| `EMAIL_HOST_PASSWORD`    | SMTP password / app password             | `your-app-password`              |
-| `MEDIA_URL`              | URL prefix for uploaded media            | `/media/`                        |
-| `MEDIA_ROOT`             | Filesystem path for uploaded media       | `media/`                         |
+The system includes a daily automated backup script (`scripts/backup.sh`) which:
+1. Performs a `mysqldump` of the database.
+2. Compresses the SQL dump using `gzip`.
+3. Uploads the dump to an AWS S3 bucket.
+4. Syncs user-uploaded media files to S3.
 
----
-
-## Running with Docker
-
-```bash
-# 1. Copy and configure environment
-cp .env.example .env
-# Edit .env — set SECRET_KEY, DEBUG=False, DB credentials
-
-# 2. Build and start services
-docker-compose up --build -d
-
-# 3. Run initial migrations and create superuser
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py createsuperuser
-
-# 4. Visit http://localhost in your browser
-```
-
-Services:
-- **web** — Django + Gunicorn on port 8000
-- **db** — MySQL 8.0 on port 3306
-- **nginx** — Reverse proxy on port 80
-
----
-
-## Project Structure
-
-```
-medbook/
-├── medbook/                  # Django project configuration
-│   ├── settings/
-│   │   ├── base.py           # Shared settings (auth, security, static, etc.)
-│   │   ├── development.py    # DEBUG=True, SQLite, console email
-│   │   └── production.py     # DEBUG=False, MySQL, SMTP, HTTPS hardening
-│   ├── urls.py               # Root URL configuration
-│   └── wsgi.py               # WSGI entry point
-├── accounts/                 # Custom User model, auth views, profile
-├── doctors/                  # Doctor model, listings, detail pages
-├── appointments/             # Appointment model, booking, management, API
-├── dashboard/                # Admin dashboard views
-├── core/                     # Shared utilities: decorators, home page
-├── templates/                # Django templates (base + per-app)
-│   ├── base.html             # Master template: navbar, messages, footer
-│   ├── accounts/             # Register, login, profile, password reset
-│   ├── doctors/              # Doctor list, doctor detail
-│   ├── appointments/         # Booking, patient appointments, doctor schedule
-│   └── dashboard/            # Admin dashboard, user/doctor/appointment management
-├── static/
-│   ├── css/main.css          # Custom styles on top of Bootstrap 5
-│   └── js/main.js            # Auto-dismiss alerts, active nav highlighting
-├── media/                    # Uploaded files (gitignored)
-├── requirements.txt          # Production dependencies
-├── requirements-dev.txt      # Development dependencies
-├── .env.example              # Environment variable template
-├── manage.py                 # Django management script
-├── Dockerfile                # Docker image definition
-├── docker-compose.yml        # Multi-service orchestration
-├── nginx/default.conf        # Nginx reverse proxy configuration
-├── README.md                 # This file
-└── AGENT.md                  # Developer handoff documentation
-```
-
----
-
-## API / URL Routes
-
-| URL Pattern                              | Method | View                        | Access Level |
-|------------------------------------------|--------|-----------------------------|-------------|
-| `/`                                      | GET    | Home page                   | Public      |
-| `/accounts/register/`                    | GET/POST | Patient registration      | Public      |
-| `/accounts/login/`                       | GET/POST | Login                     | Public      |
-| `/accounts/logout/`                      | POST   | Logout                      | Authenticated |
-| `/accounts/profile/`                     | GET/POST | Profile update            | Authenticated |
-| `/accounts/password-reset/`              | GET/POST | Password reset request    | Public      |
-| `/accounts/password-reset/done/`         | GET    | Password reset sent         | Public      |
-| `/accounts/password-reset/<uid>/<token>/`| GET/POST | Set new password          | Public (token) |
-| `/accounts/password-reset/complete/`     | GET    | Password reset complete     | Public      |
-| `/doctors/`                              | GET    | Doctor listing              | Public      |
-| `/doctors/<pk>/`                         | GET    | Doctor detail               | Public      |
-| `/appointments/book/<doctor_pk>/`        | GET/POST | Book appointment          | Patient     |
-| `/appointments/my/`                      | GET    | Patient's appointments      | Authenticated |
-| `/appointments/cancel/<pk>/`             | POST   | Cancel appointment          | Patient     |
-| `/appointments/doctor/`                  | GET    | Doctor's schedule           | Doctor      |
-| `/appointments/update-status/<pk>/`      | POST   | Update appointment status   | Doctor      |
-| `/appointments/available-slots/`         | GET    | Available slots JSON API    | Public      |
-| `/dashboard/`                            | GET    | Admin dashboard             | Admin/Staff |
-| `/dashboard/users/`                      | GET    | User management             | Admin/Staff |
-| `/dashboard/users/<pk>/toggle-active/`   | POST   | Activate/deactivate user    | Admin/Staff |
-| `/dashboard/doctors/`                    | GET    | Doctor management           | Admin/Staff |
-| `/dashboard/doctors/create/`             | GET/POST | Create doctor             | Admin/Staff |
-| `/dashboard/doctors/<pk>/edit/`          | GET/POST | Edit doctor               | Admin/Staff |
-| `/dashboard/doctors/<pk>/delete/`        | POST   | Delete doctor               | Admin/Staff |
-| `/dashboard/appointments/`              | GET    | Appointment management      | Admin/Staff |
-| `/dashboard/appointments/<pk>/update/`   | POST   | Update appointment status   | Admin/Staff |
-| `/admin/`                                | GET    | Django admin site           | Superuser   |
-| `/health/`                               | GET    | Container/load-balancer health check | Public |
-
----
-
-## Deployment & CI/CD
-
-The EC2 deployment runs three containers on one Docker network:
-
-- `nginx`: public entrypoint on port `80`; proxies Django and serves `/static/` and `/media/`.
-- `web`: Django + Gunicorn, internal port `8000` only.
-- `db`: MySQL 8.0 with persistent Docker volume `mysql_data`, internal port `3306` only.
-
-Live site: `http://3.27.246.227`
-
-CI/CD flow:
-
-```text
-git push -> GitHub Actions -> SSH -> scripts/deploy.sh -> docker compose up
-```
-
-Recommended production `.env` values:
-
-```bash
-SECRET_KEY=<strong secret>
-DEBUG=False
-ALLOWED_HOSTS=3.27.246.227,localhost,127.0.0.1
-CSRF_TRUSTED_ORIGINS=http://3.27.246.227
-DJANGO_SETTINGS_MODULE=medbook.settings.production
-DB_NAME=medbook_db
-DB_USER=medbook_user
-DB_PASSWORD=<strong password>
-DB_ROOT_PASSWORD=<strong root password>
-DB_HOST=db
-DB_PORT=3306
-SECURE_SSL_REDIRECT=False
-S3_BUCKET=<backup bucket>
-```
-
-Enable `SECURE_SSL_REDIRECT=True`, secure cookies, and HSTS only after a valid domain certificate is installed. Let's Encrypt does not issue certificates for bare public IP addresses.
-
-GitHub Actions secrets:
-
-| Secret name | Value |
-|-------------|-------|
-| `EC2_HOST` | `3.27.246.227` |
-| `EC2_USER` | `ubuntu` |
-| `EC2_SSH_KEY` | Contents of the EC2 private key |
-| `DJANGO_SECRET_KEY` | Django production secret key |
-| `DB_NAME` | MySQL database name |
-| `DB_USER` | MySQL username |
-| `DB_PASSWORD` | MySQL password |
-| `DB_HOST` | `db` for Docker MySQL, or the RDS endpoint |
-
-Manual deploy on EC2:
-
-```bash
-ssh ubuntu@3.27.246.227
-cd /home/ubuntu/medbook
-bash scripts/deploy.sh
-```
-
-Manual Docker commands:
-
-```bash
-docker compose -f docker-compose.prod.yml build web
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs --tail=100 web nginx db
-curl -I http://localhost/health/
-```
-
-Rollback:
-
-```bash
-git revert <commit>
-git push origin main
-```
-
-For a micro instance, keep `WEB_CONCURRENCY=1`, retain swap, and avoid exposing MySQL or Gunicorn directly to the internet.
-
-Backup strategy:
-
-```bash
-bash scripts/backup.sh
-```
-
-Schedule on EC2 with `crontab -e`:
-
+**Cron Configuration (`crontab -e`):**
 ```cron
-0 2 * * * /home/ubuntu/medbook/scripts/backup.sh
+0 2 * * * /home/ubuntu/medbook/scripts/backup.sh >> /var/log/medbook_backup.log 2>&1
 ```
 
-Store backups off-instance in S3 with lifecycle rules. Monitor disk, memory, Docker restarts, Nginx 5xx counts, and MySQL backup freshness through CloudWatch Agent or equivalent.
+---
+
+## 🛠 Troubleshooting & Production Notes
+
+*   **502 Bad Gateway**: This means Nginx is running but Django is not. Check Django logs: `docker compose -f docker-compose.prod.yml logs web`.
+*   **Database Connection Errors**: If `web` is continually restarting, it likely can't reach MySQL. Check: `docker compose -f docker-compose.prod.yml logs db`.
+*   **High Memory Usage**: Ensure the swap file is active. `t3.micro` instances can run out of memory during `docker build`.
+*   **Deployment Fails**: Review the GitHub Actions console. If tests fail, the deployment is correctly halted.
 
 ---
 
-## Security Measures Implemented
+## 🔮 Future Improvements
 
-| Security Feature                    | Implementation Location               |
-|------------------------------------|----------------------------------------|
-| CSRF protection                    | `CsrfViewMiddleware` in `base.py`; `{% csrf_token %}` in all forms |
-| Login required                     | `@login_required` decorator on all data-modifying views |
-| Role-based access control          | `@role_required` decorator in `core/decorators.py` |
-| Parameterised queries              | Django ORM used throughout; zero raw SQL |
-| X-Frame-Options: DENY              | `X_FRAME_OPTIONS = "DENY"` in `base.py` |
-| X-Content-Type-Options: nosniff    | `SECURE_CONTENT_TYPE_NOSNIFF = True` in `base.py` |
-| Password hashing (PBKDF2)          | Django default `AUTH_PASSWORD_VALIDATORS` in `base.py` |
-| Secrets via env vars               | `python-decouple` — `SECRET_KEY`, DB creds loaded from `.env` |
-| DEBUG=False in production          | `production.py` sets `DEBUG = False` |
-| HTTPS hardening (prod)             | SSL redirect, HSTS, secure cookies in `production.py` |
-| Health checks                      | `/health/`, Docker healthchecks, Nginx healthcheck |
-| Reverse proxy hardening            | Nginx security headers, gzip, proxy timeout tuning |
-| Input validation                   | Django forms with built-in validators; model `clean()` methods |
-| Double-booking prevention          | DB `UniqueConstraint` + model-level `clean()` validation |
-| SecurityMiddleware                 | First middleware in `MIDDLEWARE` list in `base.py` |
-
----
-
-## Known Limitations & Future Improvements
-
-### Limitations
-- No real-time notifications (WebSockets/push) — uses flash messages only
-- No payment integration — consultation fee is display-only
-- No appointment reminders / follow-up emails
-- Profile photos are not resized/optimised on upload
-- No rate limiting on login or registration
-
-### Future Improvements
-- Add WebSocket-based real-time notifications
-- Integrate Stripe/PayPal for online payment
-- Add SMS/email appointment reminders
-- Implement doctor reviews and ratings
-- Add calendar view for doctor schedules
-- Add API endpoints (DRF) for mobile app support
-- Add Celery for async email sending
-- Implement two-factor authentication
-- Add comprehensive logging and monitoring
+While this is a robust Capstone release, true enterprise scale would require:
+1.  **RDS Migration**: Decoupling the database into Amazon RDS for Multi-AZ support.
+2.  **S3 Media Storage**: Implementing `django-storages` to offload media serving directly to AWS S3.
+3.  **Load Balancing**: Placing the application behind an Application Load Balancer (ALB) and an Auto Scaling Group.
+4.  **Container Registry**: Using AWS ECR to build images in GitHub Actions and pull pre-built images to EC2, rather than building on the micro instance.
