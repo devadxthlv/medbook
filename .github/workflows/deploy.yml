@@ -34,8 +34,8 @@ jobs:
       CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1
       DJANGO_SETTINGS_MODULE: medbook.settings.production
       DB_NAME: medbook_test
-      DB_USER: medbook_user
-      DB_PASSWORD: medbook_password
+      DB_USER: root
+      DB_PASSWORD: root_password
       DB_HOST: 127.0.0.1
       DB_PORT: "3306"
 
