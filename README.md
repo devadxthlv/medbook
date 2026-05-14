@@ -220,13 +220,30 @@ To transition to a true enterprise-scale architecture, the following upgrades ar
 
 ---
 
-## 📸 Screenshots
+## 📸 Application Screenshots
 
-| Dashboard | Appointment Booking |
-| :---: | :---: |
-| ![Dashboard Placeholder](https://via.placeholder.com/400x250.png?text=Admin+Dashboard) | ![Booking Placeholder](https://via.placeholder.com/400x250.png?text=Appointment+Booking) |
-| **CI/CD Pipeline** | **Security Validation** |
-| ![Actions Placeholder](https://via.placeholder.com/400x250.png?text=GitHub+Actions) | ![HTTPS Placeholder](https://via.placeholder.com/400x250.png?text=HTTPS+TLS+Lock) |
+### Home Page
+![Home Page](screenshots/01_home.png)
+
+### Registration & Login
+| Register | Login |
+|----------|-------|
+| ![Register](screenshots/02_register.png) | ![Login](screenshots/03_login.png) |
+
+### Doctor Listing & Detail
+![Doctor Listing](screenshots/04_doctor_listing.png)
+![Doctor Detail](screenshots/05_doctor_detail.png)
+
+### Patient — My Appointments
+![My Appointments](screenshots/06_my_appointments.png)
+
+### Admin Dashboard
+![Admin Dashboard](screenshots/07_admin_dashboard.png)
+
+### Admin — Management Pages
+| Users | Doctors | Appointments |
+|-------|---------|--------------|
+| ![Users](screenshots/08_admin_users.png) | ![Doctors](screenshots/09_admin_doctors.png) | ![Appointments](screenshots/10_admin_appointments.png) |
 
 ---
 *Architected and Deployed by [Devadath] for the DevSecOps Capstone Project.*
