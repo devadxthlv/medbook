@@ -15,6 +15,7 @@ docker compose -f docker-compose.prod.yml build web
 
 echo ">>> Restarting services..."
 docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml exec -T nginx nginx -s reload || true
 
 echo ">>> Waiting for services to be healthy..."
 # Wait up to 120 seconds for the web container to be healthy
